@@ -1,3 +1,5 @@
+// reg2html version 0.1
+
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -13,7 +15,10 @@ using namespace tinyxml2;
 
 //html target file out stream
 std::ofstream ofile;
+//files parsed
 int parsecounter = 0;
+//default and working file name
+std::string defaultfile = "registry";
 
 //used to traverse registry folders for xml files
 struct folder
@@ -142,9 +147,6 @@ bool parseXML(std::string filename)
     XMLElement *configdatum = root->FirstChildElement();
 
     //std::cout << root->Value() << std::endl;
-
-    ofile << "<html>" << std::endl;
-    ofile << "<body>" << std::endl;
     ofile << "<h2>" << filename << "</h2>" << std::endl;
 
     ofile << "   <table border=\"1\">" << std::endl;
@@ -199,8 +201,7 @@ bool parseXML(std::string filename)
 
     //terminate html
     ofile << "    </table>" << std::endl;
-    ofile << "</body>" << std::endl;
-    ofile << "</html>" << std::endl;
+
 
     return true;
 }
@@ -250,7 +251,7 @@ int main(int argc, char *argv[])
     }
 
     std::vector<std::string> dirs = getFolders(".\\", true);
-    std::string defaultfile = "registry";
+
 
     //find registry folder
     bool foundregistry = false;
@@ -280,11 +281,20 @@ int main(int argc, char *argv[])
 
     ofile.open(std::string(defaultfile + ".html").c_str());
 
+    //create sn header
+    ofile << "<html>" << std::endl;
+    ofile << "<body>" << std::endl;
+    ofile << "<h2>" << defaultfile << "</h2>" << std::endl;
 
     //initialize registry folder file structure
     //parse all xml files to html format
     RegistryFolder.path = ".\\Registry\\";
     addFolders(RegistryFolder);
+
+
+    //terminate html
+    ofile << "</body>" << std::endl;
+    ofile << "</html>" << std::endl;
 
     std::cout << "\n\nParsed " << parsecounter << " files to " << defaultfile + ".html\n";
 
