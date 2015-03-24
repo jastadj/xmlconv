@@ -240,9 +240,17 @@ void addFolders(folder tfolder)
 
 int main(int argc, char *argv[])
 {
+    std::cout << "reg2html v0.1\n\n";
+    //fastrun -n param bypasses the serial number entry
+    bool fastrun = false;
+
+    for(int i = 0; i < argc; i++)
+    {
+        if(std::string(argv[i]) == "-n") fastrun = true;
+    }
 
     std::vector<std::string> dirs = getFolders(".\\", true);
-    std::string fileoutput = "default.html";
+    std::string defaultfile = "registry";
 
     //find registry folder
     bool foundregistry = false;
@@ -256,24 +264,29 @@ int main(int argc, char *argv[])
     if(!foundregistry)
     {
         std::cout << "Unable to find Registry folder in root directory...\n";
+        system("pause");
         return 0;
     }
 
     //save html file as system serial number
-    std::string buf;
-    std::cout << "Enter system serial number:";
-    std::getline(std::cin, buf);
-    if(buf != "")
+    if(!fastrun)
     {
-        ofile.open(std::string(buf + ".html").c_str());
+        std::string buf;
+        std::cout << "Enter system serial number:";
+        std::getline(std::cin, buf);
+        if(buf == "") buf = defaultfile;
+        else defaultfile = buf;
     }
+
+    ofile.open(std::string(defaultfile + ".html").c_str());
+
 
     //initialize registry folder file structure
     //parse all xml files to html format
     RegistryFolder.path = ".\\Registry\\";
     addFolders(RegistryFolder);
 
-    std::cout << "\n\nParsed " << parsecounter << " files to " << buf + ".html\n";
+    std::cout << "\n\nParsed " << parsecounter << " files to " << defaultfile + ".html\n";
 
 
     ofile.close();
