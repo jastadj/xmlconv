@@ -1,8 +1,8 @@
-// reg2html version 0.1
-
+#define VERSION "reg2html v0.2"
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <fstream>
 #include "tinyxml2.h"
 #include <vector>
@@ -13,12 +13,18 @@
 
 using namespace tinyxml2;
 
+std::string versionstring(VERSION);
+
 //html target file out stream
 std::ofstream ofile;
 //files parsed
 int parsecounter = 0;
 //default and working file name
 std::string defaultfile = "registry";
+//write only deltas
+bool deltasonly = false;
+//flag to determine if floats should not be converted for readability
+bool rawfloats = false;
 
 //used to traverse registry folders for xml files
 struct folder
@@ -146,6 +152,41 @@ bool parseXML(std::string filename)
     XMLElement *root = test.FirstChildElement("ConfigDatabase");
     XMLElement *configdatum = root->FirstChildElement();
 
+    XMLElement *configdatumdeltas = root->FirstChildElement();
+    std::vector<XMLElement*> deltaslist;
+
+    //if deltas only is enabled, first find the configdatums that have deltas
+    if(deltasonly)
+    {
+        while(configdatumdeltas != NULL)
+        {
+            XMLElement *child_d = configdatumdeltas->FirstChildElement();
+
+            std::string strdefault = "N\\A";
+            std::string strcurrent = "N\\A";
+
+            while(child_d != NULL)
+            {
+                if( std::string(child_d->Value()) == "Current") strcurrent = child_d->GetText();
+                else if( std::string(child_d->Value()) == "Default") strdefault = child_d->GetText();
+                child_d = child_d->NextSiblingElement();
+            }
+            //if current != default, add to deltas list
+            if(strcurrent != strdefault) deltaslist.push_back(configdatumdeltas);
+            //next config datum
+            configdatumdeltas = configdatumdeltas->NextSiblingElement();
+        }
+
+        //if deltas only, and this xml has no config datums that have any deltas, return
+        if(deltaslist.empty()) return true;
+
+    }
+
+
+
+
+
+
     //std::cout << root->Value() << std::endl;
     ofile << "<h2>" << filename << "</h2>" << std::endl;
 
@@ -162,9 +203,27 @@ bool parseXML(std::string filename)
 
     while(configdatum != NULL)
     {
+        //if deltas only and this configdatum is not in the list, continue
+        if(deltasonly)
+        {
+            bool hasdelta = false;
+
+            for(int i = 0; i < int(deltaslist.size()); i++)
+            {
+                if(deltaslist[i] == configdatum) hasdelta = true;
+            }
+
+            if(!hasdelta)
+            {
+                configdatum = configdatum->NextSiblingElement();
+                continue;
+            }
+        }
+
 
         ofile << "   <tr>" << std::endl;
         ofile << "      <th style=\"text-align:left\">" << configdatum->Attribute("name") << "</th>" << std::endl;
+        std::string cdtype = std::string(configdatum->Attribute("type"));
 
         XMLElement *child = configdatum->FirstChildElement();
 
@@ -177,10 +236,100 @@ bool parseXML(std::string filename)
         while(child != NULL)
         {
             //std::cout << "child->value = " << child->Value() << std::endl;
-            if( std::string(child->Value()) == "Current") strcurrent = child->GetText();
-            else if( std::string(child->Value()) == "Default") strdefault = child->GetText();
-            else if( std::string(child->Value()) == "MinValue") strmin = child->GetText();
-            else if( std::string(child->Value()) == "MaxValue") strmax = child->GetText();
+            if( std::string(child->Value()) == "Current")
+            {
+                strcurrent = child->GetText();
+
+                //format floats for readability
+                if(!rawfloats)
+                {
+                    if(cdtype == "float32")
+                    {
+                        float num = atof(strcurrent.c_str());
+                        std::stringstream fstring;
+                        fstring << num;
+                        strcurrent = fstring.str();
+                    }
+                    else if(cdtype == "float64")
+                    {
+                        double num = atol(strcurrent.c_str());
+                        std::stringstream fstring;
+                        fstring << num;
+                        strcurrent = fstring.str();
+                    }
+                }
+            }
+            else if( std::string(child->Value()) == "Default")
+            {
+                strdefault = child->GetText();
+
+                //format floats for readability
+                if(!rawfloats)
+                {
+                    if(cdtype == "float32")
+                    {
+                        float num = atof(strdefault.c_str());
+                        std::stringstream fstring;
+                        fstring << num;
+                        strdefault = fstring.str();
+                    }
+                    else if(cdtype == "float64")
+                    {
+                        double num = atol(strdefault.c_str());
+                        std::stringstream fstring;
+                        fstring << num;
+                        strdefault = fstring.str();
+                    }
+                }
+
+            }
+            else if( std::string(child->Value()) == "MinValue")
+            {
+                strmin = child->GetText();
+
+                //format floats for readability
+                if(!rawfloats)
+                {
+                    if(cdtype == "float32")
+                    {
+                        float num = atof(strmin.c_str());
+                        std::stringstream fstring;
+                        fstring << num;
+                        strmin = fstring.str();
+                    }
+                    else if(cdtype == "float64")
+                    {
+                        double num = atol(strmin.c_str());
+                        std::stringstream fstring;
+                        fstring << num;
+                        strmin = fstring.str();
+                    }
+                }
+            }
+            else if( std::string(child->Value()) == "MaxValue")
+            {
+                strmax = child->GetText();
+
+                //format floats for readability
+                if(!rawfloats)
+                {
+                    if(cdtype == "float32")
+                    {
+                        float num = atof(strmax.c_str());
+                        std::stringstream fstring;
+                        fstring << num;
+                        strmax = fstring.str();
+                    }
+                    else if(cdtype == "float64")
+                    {
+                        double num = atol(strmax.c_str());
+                        std::stringstream fstring;
+                        fstring << num;
+                        strmax = fstring.str();
+                    }
+                }
+            }
+
             else if( std::string(child->Value()) == "ShortDesc") strshortdesc = child->GetText();
 
 
@@ -241,13 +390,25 @@ void addFolders(folder tfolder)
 
 int main(int argc, char *argv[])
 {
-    std::cout << "reg2html v0.1\n\n";
+    std::cout << versionstring << std::endl;
     //fastrun -n param bypasses the serial number entry
     bool fastrun = false;
 
+
     for(int i = 0; i < argc; i++)
     {
-        if(std::string(argv[i]) == "-n") fastrun = true;
+        if(std::string(argv[i]) == "-f") fastrun = true;
+        else if(std::string(argv[i]) == "-r") rawfloats = true;
+        else if(std::string(argv[i]) == "-d") deltasonly = true;
+        else if(std::string(argv[i]) == "-?" || std::string(argv[i]) == "-h")
+        {
+            std::cout << "Usage:\n";
+            std::cout << "-f : Fast run parameter, does not query user for serial number\n";
+            std::cout << "-d : Only record elements that have deltas between default and current\n";
+            std::cout << "-r : Write floats as raw values without conversion\n";
+            std::cout << "-h : Help\n\n";
+            return 0;
+        }
     }
 
     std::vector<std::string> dirs = getFolders(".\\", true);
@@ -264,8 +425,7 @@ int main(int argc, char *argv[])
     }
     if(!foundregistry)
     {
-        std::cout << "Unable to find Registry folder in root directory...\n";
-        system("pause");
+        std::cout << "Error: Registry folder not found.\n";
         return 0;
     }
 
